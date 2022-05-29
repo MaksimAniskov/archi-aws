@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<Configuration>
+    <AwsImport profileName="some-aws-cli-config-profile-name" region="eu-central-1"/>
+</Configuration>

@@ -1,0 +1,4 @@
+archi_aws_sdk-*.jar
+!archi_aws_sdk-*-with-dependencies.jar
+archive-tmp/
+maven-archiver/

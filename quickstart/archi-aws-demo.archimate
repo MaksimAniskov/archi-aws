@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="archi-aws-demo" id="id-993a8fd33f9243ce95c14f27f5caec61" version="4.9.0">
+  <folder name="Strategy" id="id-9fea27deb3e44e7bad8c8de5ee4dc479" type="strategy"/>
+  <folder name="Business" id="id-55c579f009ac44c89da024dc4ee4906c" type="business"/>
+  <folder name="Application" id="id-3abe19054bc6428d9acba55b279d8e3d" type="application"/>
+  <folder name="Technology &amp; Physical" id="id-326684f1611b49bfae457901b2e6c00a" type="technology"/>
+  <folder name="Motivation" id="id-3b9e6e819fb14612926f490961ff5054" type="motivation"/>
+  <folder name="Implementation &amp; Migration" id="id-043727dacab24dc887ea20c8136dc32d" type="implementation_migration"/>
+  <folder name="Other" id="id-cc122018fb3b482b8d8dbcb4d2124b87" type="other"/>
+  <folder name="Relations" id="id-e372298cf0204e65a9d363a73e0a2164" type="relations"/>
+  <folder name="Views" id="id-6dc3b8a71353462ea490edca6c468bc7" type="diagrams">
+    <element xsi:type="archimate:ArchimateDiagramModel" name="Default View" id="id-f2a358f4f8f14806ba0207f1c6808f04"/>
+  </folder>
+  <property key="aws-filter-cloudcontrol-resourcetypes" value="AWS::EC2::VPC"/>
+  <property key="aws-filter-resourcegroupstaggingapi-resourcetypes" value="ec2:instance,s3:bucket"/>
+  <property key="aws-filter-resourcegroupstaggingapi-tags" value="*"/>
+</archimate:model>

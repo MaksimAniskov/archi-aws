@@ -1,0 +1,322 @@
+﻿// Visit https://github.com/MaksimAniskov/archi-aws
+// MIT License https://github.com/MaksimAniskov/archi-aws/LICENSE
+// Copyright (c) 2022 Maksim Aniskov
+
+'use strict';
+
+var settings = readSettings('cloud-import.xml');
+console.log('settings.aws:', settings.aws);
+
+// Optionally use the AWS CLI's named profile https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
+var profile = settings.aws.profileName ? getAwsProfile(settings.aws.profileName).get() : null;
+
+// Determine AWS region
+var region = settings.aws.region;
+if (!region && profile) {
+    var regionProp = profile.property('region');
+    if (regionProp.isPresent()) {
+        region = regionProp.get();
+        console.log('Use region from named profile:', region);
+    }
+}
+region = Java.type('software.amazon.awssdk.regions.Region').of(region);
+
+var awsCredentialsProvider = profile ? createAwsCredentialsProvider(profile, region) : null;
+
+var model = $.model.getLoadedModels()[0];
+console.log('Model name:', model.name);
+
+var resources = [];
+
+var cloudControlResourceTypes = [];
+var modelPropAwsFilterCloudControlResourceTypes = model.prop('aws-filter-cloudcontrol-resourcetypes');
+if (modelPropAwsFilterCloudControlResourceTypes) {
+    console.log("Model's property aws-filter-cloudcontrol-resourcetypes:", modelPropAwsFilterCloudControlResourceTypes);
+    cloudControlResourceTypes = modelPropAwsFilterCloudControlResourceTypes.split(/[\n,;]+/);
+    console.log('Types of resources to import using CloudControl:', cloudControlResourceTypes);
+    var cloudControlResources = getCloudControlResources(cloudControlResourceTypes, region, awsCredentialsProvider);
+    console.log('Number of resources CloudControl found:', cloudControlResources.length);
+    resources = resources.concat(cloudControlResources);
+} else {
+    console.log("Model's property aws-filter-cloudcontrol-resourcetypes not set. Skipping importing using CloudControl");
+}
+
+var modelPropAwsFilterRgtapiTags = model.prop('aws-filter-resourcegroupstaggingapi-tags');
+var modelPropAwsFilterRgtapiResourceTypes = model.prop('aws-filter-resourcegroupstaggingapi-resourcetypes');
+if (modelPropAwsFilterRgtapiTags) {
+    console.log("Model's property aws-filter-resourcegroupstaggingapi-tags:", modelPropAwsFilterRgtapiTags);
+    console.log("Model's property aws-filter-resourcegroupstaggingapi-resourcetypes:", modelPropAwsFilterRgtapiResourceTypes);
+    console.log("Importing resources using Resource Groups Tagging API");
+
+    modelPropAwsFilterRgtapiTags.split(/[\n;]+/).forEach(function (filterAndExpression) {
+        var rgtapiResources = getRgtapiResources(
+            filterAndExpression,
+            modelPropAwsFilterRgtapiResourceTypes,
+            region, awsCredentialsProvider
+        );
+        console.log('Number of resources Resource Groups Tagging found:', rgtapiResources.length);
+        resources = resources.concat(rgtapiResources);
+    });
+
+} else {
+    console.log("Model's property aws-filter-resourcegroupstaggingapi-tags not set. Skipping importing using Resource Groups Tagging");
+}
+
+var resourcesCaptureTimestamp = (new Date()).toISOString();
+console.log('Resources capture timestamp:', resourcesCaptureTimestamp);
+
+resources = resources.filter(function (r) {
+    return !isResourceInModel(r, model);
+});
+console.log('Resources to add to model:', resources.map(function (r) { return r.type + ': ' + r.id; }));
+
+var folderTechnology = $(model).find('folder.Technology & Physical');
+var folderNewlyDiscoveredResources = folderTechnology.children('folder.Newly discovered resources').first();
+if (!folderNewlyDiscoveredResources) {
+    console.log('Create Technology & Physical/Newly discovered resources folder');
+    folderNewlyDiscoveredResources = folderTechnology.first().createFolder('Newly discovered resources');
+}
+
+resources.forEach(function (resource) {
+    var element = model.createElement('technology-service', resource.id, folderNewlyDiscoveredResources);
+    element.prop(
+        'resource-id',
+        resource.id,
+        false // add or update (if existed)
+    );
+    if (resource.arn) { // CloudControl does not return ARNs
+        element.prop(
+            'resource-arn',
+            resource.arn,
+            false // add or update (if existed)
+        );
+    }
+    element.prop(
+        'resource-captured-at',
+        resourcesCaptureTimestamp,
+        false // add or update (if existed)
+    );
+
+    if (!model.findSpecialization(resource.type, 'technology-service')) {
+        model.createSpecialization(resource.type, 'technology-service');
+    }
+    element.specialization = resource.type;
+});
+
+model.prop('aws-resources-captured-at', resourcesCaptureTimestamp);
+// That's it. Exiting
+
+function getCloudControlResources(cloudControlResourceTypes, region, credentialsProvider) {
+    var cloudControlClientBuilder = Java.type("software.amazon.awssdk.services.cloudcontrol.CloudControlClient").builder();
+    if (region) {
+        cloudControlClientBuilder.region(region)
+    }
+    if (credentialsProvider) {
+        cloudControlClientBuilder.credentialsProvider(credentialsProvider);
+    }
+    var cloudControlClient = cloudControlClientBuilder.build();
+
+    var result = [];
+    try {
+        var listResourcesRequestBuilder = Java.type("software.amazon.awssdk.services.cloudcontrol.model.ListResourcesRequest").builder();
+        cloudControlResourceTypes.forEach(function (resourceType) {
+            listResourcesRequestBuilder.typeName(resourceType);
+            try {
+                for (var nextToken; true;) {
+                    if (nextToken) {
+                        listResourcesRequestBuilder.nextToken(nextToken);
+                    }
+                    var listResourcesResponse = cloudControlClient.listResources(listResourcesRequestBuilder.build());
+                    var resourceDescriptions = listResourcesResponse.resourceDescriptions();
+                    for (var i = resourceDescriptions.size() - 1; i >= 0; i--) {
+                        result.push({
+                            type: resourceType.toLowerCase(),
+                            id: resourceDescriptions.get(i).identifier()
+                        });
+                    }
+                    nextToken = listResourcesResponse.nextToken();
+                    if (!nextToken) {
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.error(e.message);
+            }
+        });
+    } finally {
+        cloudControlClient.close();
+    }
+    return result;
+}
+
+function getRgtapiResources(tagFilters, resourceTypeFilters, region, credentialsProvider) {
+    var clientBuilder = Java.type("software.amazon.awssdk.services.resourcegroupstaggingapi.ResourceGroupsTaggingApiClient").builder();
+    if (region) {
+        clientBuilder.region(region);
+    }
+    if (credentialsProvider) {
+        clientBuilder.credentialsProvider(credentialsProvider);
+    }
+    var client = clientBuilder.build();
+
+    var result = [];
+    try {
+        var requestBuilder = Java.type("software.amazon.awssdk.services.resourcegroupstaggingapi.model.GetResourcesRequest").builder();
+
+        if (tagFilters) {
+            var rgtapiTagFilters = [];
+            if (tagFilters !== '*') {
+                tagFilters.split(' and ').forEach(function (tagFilter) {
+                    var tmp = tagFilter.trim().split('=');
+                    var tagKey = tmp[0].trim();
+                    var tagValues = tmp[1].trim();
+                    var tagFilterBuilder = Java.type("software.amazon.awssdk.services.resourcegroupstaggingapi.model.TagFilter").builder();
+                    tagFilterBuilder.key(tagKey);
+                    if (tagValues) {
+                        tagFilterBuilder.values(tagValues.split(',').map(function (v) { return v.trim() }));
+                    }
+                    rgtapiTagFilters.push(tagFilterBuilder.build());
+                });
+            }
+
+            console.log('Apply tagFilters', JSON.stringify(rgtapiTagFilters.map(function (e) { return { key: e.key(), values: e.values().toString() } })));
+            requestBuilder.tagFilters(rgtapiTagFilters);
+        }
+
+        if (resourceTypeFilters) {
+            resourceTypeFilters = resourceTypeFilters.split(/[\n,;]+/);
+            console.log('Apply resourceTypeFilters', resourceTypeFilters);
+            requestBuilder.resourceTypeFilters(resourceTypeFilters);
+        }
+
+        try {
+            for (var paginationToken; true;) {
+                if (paginationToken) {
+                    requestBuilder.paginationToken(paginationToken);
+                }
+
+                var response = client.getResources(requestBuilder.build());
+                var resourceTagMappingList = response.resourceTagMappingList();
+                for (var i = resourceTagMappingList.size() - 1; i >= 0; i--) {
+                    var arn = resourceTagMappingList.get(i).resourceARN();
+                    var res = parseArnToCloudControlResourceTypeAndId(arn);
+                    res.arn = arn;
+                    result.push(res);
+                }
+
+                paginationToken = response.paginationToken();
+                if (!paginationToken) {
+                    break;
+                }
+            }
+        } catch (e) {
+            console.error(e.message);
+        }
+    } finally {
+        client.close();
+    }
+    return result;
+}
+
+function parseArnToCloudControlResourceTypeAndId(arnString) {
+    // arn:partition:service:region:account-id:resource-id
+    // arn:partition:service:region:account-id:resource-type/resource-id
+    // arn:partition:service:region:account-id:resource-type:resource-id
+    var arnMatch = arnString.match(/^([^:]+):([^:]+):([^:]+):([^:]*):([^:]*):(.+)$/);
+    var service = arnMatch[3];
+    var resourceTypeAndIdString = arnMatch[6];
+    var resourceTypeAndIdMatch = resourceTypeAndIdString.match(/^([^:\/]+)([:\/](.+))?/);
+    var resourceType = resourceTypeAndIdMatch[1];
+    var resourceId = resourceTypeAndIdMatch[3];
+    if (!resourceId) {
+        resourceId = resourceType;
+        resourceType = undefined;
+    }
+
+    if (service === 's3' && !resourceType) {
+        resourceType = 'bucket';
+    }
+    resourceType = resourceType.replace(/-/g, '');
+
+    return {
+        type: 'aws::' + service + '::' + resourceType,
+        id: resourceId
+    };
+}
+
+function isResourceInModel(resource, model) {
+    return $('element').filter(function (e) {
+        return e.prop('resource-id') === resource.id;
+    }).length > 0;
+}
+
+function readSettings(settingsXmlFileName) {
+    var attrs = Java.type('javax.xml.parsers.DocumentBuilderFactory')
+        .newInstance()
+        .newDocumentBuilder()
+        .parse(new (Java.type('java.io.File'))(__DIR__ + '/' + settingsXmlFileName))
+        .getElementsByTagName("AwsImport")
+        .item(0)
+        .getAttributes();
+    return {
+        aws: {
+            profileName: safeGetNodeValue(attrs.getNamedItem('profileName')),
+            region: safeGetNodeValue(attrs.getNamedItem('region')),
+        }
+    };
+
+    function safeGetNodeValue(node) {
+        return node ? node.getNodeValue() : null;
+    }
+}
+
+function getAwsProfile(profileName) {
+    var profile = Java.type("software.amazon.awssdk.profiles.ProfileFile").defaultProfileFile().profile(profileName);
+    if (!profile.isPresent()) {
+        throw new Error("Can't find AWS CLI named profile " + profileName);
+    }
+    return profile;
+}
+
+function createAwsCredentialsProvider(profile, region) {
+    var roleArn = profile.property('role_arn');
+    var mfaSerial = profile.property('mfa_serial');
+    if (!roleArn.isPresent() || !mfaSerial.isPresent()) {
+        return Java.type("software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider").create(profile.name());
+    }
+
+    // MFA
+    mfaSerial = mfaSerial.get();
+    roleArn = roleArn.get();
+    console.log('MFA device:', mfaSerial);
+    var dlg = new (Java.type("org.eclipse.jface.dialogs.InputDialog"))(null, 'Your MFA device ' + mfaSerial, 'MFA code', null, null);
+    if (dlg.open()) {
+        throw new Error("Cancelled");
+    }
+
+    var stsClientBuilder = Java.type("software.amazon.awssdk.services.sts.StsClient")
+        .builder();
+
+    if (region) {
+        stsClientBuilder.region(region);
+    }
+
+    var stsClient = stsClientBuilder.build();
+
+    var assumeRoleRequest = Java.type('software.amazon.awssdk.services.sts.model.AssumeRoleRequest')
+        .builder()
+        .serialNumber(mfaSerial)
+        .tokenCode(dlg.getValue())
+        // .durationSeconds(Integer)
+        .roleSessionName('archi-cloud-import-' + Math.floor(Math.random() * 10000))
+        .roleArn(roleArn)
+        .build();
+    var assumeRoleResponse = stsClient.assumeRole(assumeRoleRequest);
+    var sessionCredentials = assumeRoleResponse.credentials();
+    var awsCredentials = Java.type("software.amazon.awssdk.auth.credentials.AwsSessionCredentials").create(
+        sessionCredentials.accessKeyId(),
+        sessionCredentials.secretAccessKey(),
+        sessionCredentials.sessionToken()
+    );
+    return Java.type("software.amazon.awssdk.auth.credentials.StaticCredentialsProvider").create(awsCredentials);
+}
