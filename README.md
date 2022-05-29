@@ -44,7 +44,7 @@ Restart *Archi*.
 
 Download ```archi_aws_sdk-1.0-jar-with-dependencies.jar```
 ```sh
-curl https://github.com/MaksimAniskov/archi-aws/raw/v1.0/aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar -o ~/archi_aws_sdk-1.0-jar-with-dependencies.jar
+curl https://raw.githubusercontent.com/MaksimAniskov/archi-aws/v1.0/aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar -o ~/archi_aws_sdk-1.0-jar-with-dependencies.jar
 ```
 
 Edit ```~/Archi/Archi.ini```
@@ -55,7 +55,7 @@ Edit ```~/Archi/Archi.ini```
 
 Download ```cloud-import.ajs```.
 ```sh
-curl https://github.com/MaksimAniskov/archi-aws/raw/v1.0/archi4_scripts/cloud-import.ajs -o ~/.archi4/scripts/cloud-import.ajs
+curl https://raw.githubusercontent.com/MaksimAniskov/archi-aws/v1.0/archi4_scripts/cloud-import.ajs -o ~/.archi4/scripts/cloud-import.ajs
 ```
 
 Restart *Archi*.
@@ -64,7 +64,7 @@ Restart *Archi*.
 
 Download ```archi_aws_sdk-1.0-jar-with-dependencies.jar```
 ```sh
-curl https://github.com/MaksimAniskov/archi-aws/raw/v1.0/aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar -o ~/archi_aws_sdk-1.0-jar-with-dependencies.jar
+curl https://raw.githubusercontent.com/MaksimAniskov/archi-aws/v1.0/aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar -o ~/archi_aws_sdk-1.0-jar-with-dependencies.jar
 ```
 
 Edit ```/Applications/Archi.app/Contents/Eclipse/Archi.ini```
@@ -76,14 +76,14 @@ Edit ```/Applications/Archi.app/Contents/Eclipse/Archi.ini```
 
 Download ```cloud-import.ajs```
 ```sh
-curl https://github.com/MaksimAniskov/archi-aws/raw/v1.0/archi4_scripts/cloud-import.ajs -o ~/Library/Application\ Support/Archi4/scripts/cloud-import.ajs
+curl https://raw.githubusercontent.com/MaksimAniskov/archi-aws/v1.0/archi4_scripts/cloud-import.ajs -o ~/Library/Application\ Support/Archi4/scripts/cloud-import.ajs
 ```
 
 Restart *Archi*.
 
 # Quick start
 
-Download https://github.com/MaksimAniskov/archi-aws/raw/v1.0/archi4_scripts/git/archi4_scripts/cloud-import.example.xml
+Download https://github.com/MaksimAniskov/archi-aws/raw/v1.0/archi4_scripts/cloud-import.example.xml
 
 Move ```cloud-import.example.xml``` to Archi's ```scripts``` folder renaming it as *cloud-import.xml*
 
@@ -94,12 +94,12 @@ MOVE %USERPROFILE%\Downloads\cloud-import.example.xml %APPDATA%\Archi4\scripts\c
 
 Linux:
 ```sh
-curl https://github.com/MaksimAniskov/archi-aws/raw/v1.0/archi4_scripts/cloud-import.example.xml -o ~/.archi4/scripts/cloud-import.xml
+curl https://raw.githubusercontent.com/MaksimAniskov/archi-aws/v1.0/archi4_scripts/cloud-import.example.xml -o ~/.archi4/scripts/cloud-import.xml
 ```
 
 macOS:
 ```sh
-curl https://github.com/MaksimAniskov/archi-aws/raw/v1.0/archi4_scripts/cloud-import.example.xml -o ~/Library/Application\ Support/Archi4/scripts/cloud-import.xml
+curl https://raw.githubusercontent.com/MaksimAniskov/archi-aws/v1.0/archi4_scripts/cloud-import.example.xml -o ~/Library/Application\ Support/Archi4/scripts/cloud-import.xml
 ```
 
 Open ```cloud-import.xml``` for editing. Replace *profileName* and *region* attributes of *Configuration* element.
