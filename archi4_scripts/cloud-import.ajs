@@ -236,6 +236,12 @@ function parseArnToCloudControlResourceTypeAndId(arnString) {
     if (service === 's3' && !resourceType) {
         resourceType = 'bucket';
     }
+    if (service === 'sqs' && !resourceType) {
+        resourceType = 'queue';
+    }
+    if (service === 'sns' && !resourceType) {
+        resourceType = 'topic';
+    }
     resourceType = resourceType.replace(/-/g, '');
 
     return {
