@@ -109,7 +109,7 @@ Open ```cloud-import.xml``` for editing. Replace *profileName* and *region* attr
 </Configuration>
 ```
 
-Download this demo model https://raw.githubusercontent.com/MaksimAniskov/archi-aws/main/quickstart/archi-aws-demo.archimate Open the model in *Archi*.
+Download this demo model [quickstart/archi-aws-demo.archimate](./quickstart/archi-aws-demo.archimate) Open the model in *Archi*.
 
 Check out the model's properties, expect to find the following properties there.
 
