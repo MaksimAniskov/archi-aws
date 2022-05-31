@@ -19,7 +19,7 @@ embedded into integral models of your enterprise, system or software.
 
 ## Windows
 
-Download https://github.com/MaksimAniskov/archi-aws/raw/v1.0/aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar
+Download [aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar](./aws_sdk_dependencies/target/archi_aws_sdk-1.0-jar-with-dependencies.jar)
 
 Copy ```archi_aws_sdk-1.0-jar-with-dependencies.jar``` to Archi's root folder.
 ```cmd
