@@ -254,6 +254,9 @@ function parseArnToCloudControlResourceTypeAndId(arnString) {
     if (service === 'sns' && !resourceType) {
         resourceType = 'topic';
     }
+    if (service === 'codecommit' && !resourceType) {
+        resourceType = 'repository';
+    }
     resourceType = resourceType.replace(/-/g, '');
 
     return {
