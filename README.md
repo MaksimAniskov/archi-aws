@@ -134,6 +134,27 @@ Discovered resources get added to the *Technology & Physical/Newly discovered re
 
 # Configuration in model's properties
 
+## aws-filter-resourcegroupstaggingapi-tags
+```
+not present, or empty string - skip importing from AWS Resource Groups Tagging API
+
+aws-filter-resourcegroupstaggingapi-tags ::= * | <filter> | <filter> ; ... | <filter> \n ...
+<filter> ::= <tag-name> = | <tag-name> = <filter-expression> | <tag-name> = <filter-and-expression>
+<filter-expression> ::= <tag-value> | <tag-value> , ...
+<filter-and-expression> ::= <filter-expression> and ...
+```
+
+Examples:
+```
+aws:cloudformation:stack-name=
+aws:cloudformation:stack-name=dev-photo-gallery
+aws:cloudformation:stack-name=dev-photo-gallery;...
+aws:cloudformation:stack-name=dev-photo-gallery\n...
+aws:cloudformation:stack-name=dev-photo-gallery,demo-photo-gallery
+Application=crm and Environment=production
+Application=crm,erp and Environment=production; aws:cloudformation:stack-name=demo-photo-gallery
+```
+
 ## aws-filter-resourcegroupstaggingapi-resourcetypes
 ```
 not present, or empty string - import all types, do not filter
@@ -150,24 +171,25 @@ s3:bucket
 s3:bucket,lambda:function
 ```
 
-## aws-filter-resourcegroupstaggingapi-tags
+## aws-filter-resourcegroupstaggingapi-exclude-resourcetypes
+If not present, or empty string, has no effect whatsoever.
+Otherwise, makes the script post-process what AWS Resource Groups Tagging API returns to filter out resources of given type(s).
+Syntax is similar to ```aws-filter-resourcegroupstaggingapi-resourcetypes```.
+Though *resource-type* must be in format *service:resource*, and cannot be just *service*.
 
+Syntax summary:
 ```
-aws-filter-resourcegroupstaggingapi-tags ::= * | <filter> | <filter> ; ... | <filter> \n ...
-<filter> ::= <tag-name> = | <tag-name> = <filter-expression> | <tag-name> = <filter-and-expression>
-<filter-expression> ::= <tag-value> | <tag-value> , ...
-<filter-and-expression> ::= <filter-expression> and ...
+not present, or empty string - has no effect
+
+aws-filter-resourcegroupstaggingapi-exclude-resourcetypes ::= <filter-expression> | <filter-expression> , ... | <filter-expression> ; ... | <filter-expression> \n ...
+<filter-expression> ::= <resource-type> | <resource-type> , ...
+<resource-type> ::= <service>:<resource>
 ```
 
 Examples:
 ```
-aws:cloudformation:stack-name=
-aws:cloudformation:stack-name=dev-photo-gallery
-aws:cloudformation:stack-name=dev-photo-gallery;...
-aws:cloudformation:stack-name=dev-photo-gallery\n...
-aws:cloudformation:stack-name=dev-photo-gallery,demo-photo-gallery
-Application=crm and Environment=production
-Application=crm,erp and Environment=production; aws:cloudformation:stack-name=demo-photo-gallery
+s3:bucket
+s3:bucket,lambda:function
 ```
 
 ## aws-filter-cloudcontrol-resourcetypes

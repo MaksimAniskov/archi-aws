@@ -43,15 +43,18 @@ if (modelPropAwsFilterCloudControlResourceTypes) {
 
 var modelPropAwsFilterRgtapiTags = model.prop('aws-filter-resourcegroupstaggingapi-tags');
 var modelPropAwsFilterRgtapiResourceTypes = model.prop('aws-filter-resourcegroupstaggingapi-resourcetypes');
+var modelPropAwsFilterRgtapiExcludeResourceTypes = model.prop('aws-filter-resourcegroupstaggingapi-exclude-resourcetypes');
 if (modelPropAwsFilterRgtapiTags) {
     console.log("Model's property aws-filter-resourcegroupstaggingapi-tags:", modelPropAwsFilterRgtapiTags);
     console.log("Model's property aws-filter-resourcegroupstaggingapi-resourcetypes:", modelPropAwsFilterRgtapiResourceTypes);
+    console.log("Model's property aws-filter-resourcegroupstaggingapi-exclude-resourcetypes:", modelPropAwsFilterRgtapiExcludeResourceTypes);
     console.log("Importing resources using Resource Groups Tagging API");
 
     modelPropAwsFilterRgtapiTags.split(/[\n;]+/).forEach(function (filterAndExpression) {
         var rgtapiResources = getRgtapiResources(
             filterAndExpression,
             modelPropAwsFilterRgtapiResourceTypes,
+            modelPropAwsFilterRgtapiExcludeResourceTypes,
             region, awsCredentialsProvider
         );
         console.log('Number of resources Resource Groups Tagging found:', rgtapiResources.length);
@@ -149,7 +152,7 @@ function getCloudControlResources(cloudControlResourceTypes, region, credentials
     return result;
 }
 
-function getRgtapiResources(tagFilters, resourceTypeFilters, region, credentialsProvider) {
+function getRgtapiResources(tagFilters, resourceTypeFilters, excludeResourceTypes, region, credentialsProvider) {
     var clientBuilder = Java.type("software.amazon.awssdk.services.resourcegroupstaggingapi.ResourceGroupsTaggingApiClient").builder();
     if (region) {
         clientBuilder.region(region);
@@ -189,6 +192,12 @@ function getRgtapiResources(tagFilters, resourceTypeFilters, region, credentials
             requestBuilder.resourceTypeFilters(resourceTypeFilters);
         }
 
+        if (excludeResourceTypes) {
+            excludeResourceTypes = excludeResourceTypes.replace(/-/g, '').split(/[\n,;]+/);
+            excludeResourceTypes = Java.type("java.util.Arrays").asList(excludeResourceTypes);
+            console.log('Exclude resource types list', excludeResourceTypes);
+        }
+        
         try {
             for (var paginationToken; true;) {
                 if (paginationToken) {
@@ -200,6 +209,9 @@ function getRgtapiResources(tagFilters, resourceTypeFilters, region, credentials
                 for (var i = resourceTagMappingList.size() - 1; i >= 0; i--) {
                     var arn = resourceTagMappingList.get(i).resourceARN();
                     var res = parseArnToCloudControlResourceTypeAndId(arn);
+                    if (excludeResourceTypes && excludeResourceTypes.contains(res.rgtapiType)) {
+                        continue;
+                    }
                     res.arn = arn;
                     result.push(res);
                 }
@@ -246,6 +258,7 @@ function parseArnToCloudControlResourceTypeAndId(arnString) {
 
     return {
         type: 'aws::' + service + '::' + resourceType,
+        rgtapiType: service + ':' + resourceType,
         id: resourceId
     };
 }
